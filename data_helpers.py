@@ -75,6 +75,8 @@ def load_data_and_labels(path):
 
     df = pd.DataFrame(data=data, columns=["id", "sentence", "e1", "e2", "relation"])
 
+    pos1, pos2 = get_relative_position(df, FLAGS.max_sentence_length)
+
     df['label'] = [utils.class2label[r] for r in df['relation']]
 
     # Text Data
@@ -100,7 +102,7 @@ def load_data_and_labels(path):
     labels = dense_to_one_hot(labels_flat, labels_count)
     labels = labels.astype(np.uint8)
 
-    return x_text, labels
+    return x_text, labels, pos1, pos2
 
 
 def get_relative_position(df, max_sentence_length):

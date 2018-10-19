@@ -17,9 +17,9 @@ warnings.filterwarnings("ignore", category=sklearn.exceptions.UndefinedMetricWar
 
 def train():
     with tf.device('/cpu:0'):
-        train_text, train_y = data_helpers.load_data_and_labels(FLAGS.train_path)
+        train_text, train_y, train_pos1, train_pos2 = data_helpers.load_data_and_labels(FLAGS.train_path)
     with tf.device('/cpu:0'):
-        test_text, test_y = data_helpers.load_data_and_labels(FLAGS.test_path)
+        test_text, test_y, test_pos1, test_pos2 = data_helpers.load_data_and_labels(FLAGS.test_path)
 
     # Build vocabulary
     # Example: x_text[3] = "A misty <e1>ridge</e1> uprises from the <e2>surge</e2>."
@@ -37,6 +37,22 @@ def train():
     print("test_x = {0}".format(test_x.shape))
     print("test_y = {0}".format(test_y.shape))
 
+    # Example: pos1[3] = [-2 -1  0  1  2   3   4 999 999 999 ... 999]
+    # [95 96 97 98 99 100 101 999 999 999 ... 999]
+    # =>
+    # [11 12 13 14 15  16  21  17  17  17 ...  17]
+    # dimension = MAX_SENTENCE_LENGTH
+    pos_vocab_processor = tf.contrib.learn.preprocessing.VocabularyProcessor(FLAGS.max_sentence_length)
+    pos_vocab_processor.fit(train_pos1 + train_pos2 + test_pos1 + test_pos2)
+    train_p1 = np.array(list(pos_vocab_processor.transform(train_pos1)))
+    train_p2 = np.array(list(pos_vocab_processor.transform(train_pos2)))
+    test_p1 = np.array(list(pos_vocab_processor.transform(test_pos1)))
+    test_p2 = np.array(list(pos_vocab_processor.transform(test_pos2)))
+    print("\nPosition Vocabulary Size: {:d}".format(len(pos_vocab_processor.vocabulary_)))
+    print("train_p1 = {0}".format(train_p1.shape))
+    print("test_p1 = {0}".format(test_p1.shape))
+    print("")
+
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
             allow_soft_placement=FLAGS.allow_soft_placement,
@@ -50,6 +66,8 @@ def train():
                     num_classes=train_y.shape[1],
                     vocab_size=len(vocab_processor.vocabulary_),
                     embedding_size=FLAGS.embedding_size,
+                    pos_vocab_size=len(pos_vocab_processor.vocabulary_),
+                    pos_embedding_size=FLAGS.pos_embedding_size,
                     filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
                     num_filters=FLAGS.num_filters,
                     num_heads=FLAGS.num_heads,
@@ -60,6 +78,8 @@ def train():
                     num_classes=train_y.shape[1],
                     vocab_size=len(vocab_processor.vocabulary_),
                     embedding_size=FLAGS.embedding_size,
+                    pos_vocab_size=len(pos_vocab_processor.vocabulary_),
+                    pos_embedding_size=FLAGS.pos_embedding_size,
                     hidden_size=FLAGS.hidden_size,
                     num_heads=FLAGS.num_heads,
                     attention_size=FLAGS.attention_size,
@@ -98,6 +118,7 @@ def train():
 
             # Write vocabulary
             vocab_processor.save(os.path.join(out_dir, "vocab"))
+            pos_vocab_processor.save(os.path.join(out_dir, "pos_vocab"))
 
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
@@ -116,14 +137,17 @@ def train():
                 print("Success to load pre-trained glove300 model!\n")
 
             # Generate batches
-            train_batches = data_helpers.batch_iter(list(zip(train_x, train_y)), FLAGS.batch_size, FLAGS.num_epochs)
+            train_batches = data_helpers.batch_iter(list(zip(train_x, train_y, train_p1, train_p2)),
+                                                    FLAGS.batch_size, FLAGS.num_epochs)
             # Training loop. For each batch...
             best_f1 = 0.0  # For save checkpoint(model)
             for train_batch in train_batches:
-                train_bx, train_by = zip(*train_batch)
+                train_bx, train_by, train_bp1, train_bp2 = zip(*train_batch)
                 feed_dict = {
                     model.input_x: train_bx,
                     model.input_y: train_by,
+                    model.input_p1: train_bp1,
+                    model.input_p2: train_bp2,
                     model.emb_dropout_keep_prob: FLAGS.emb_dropout_keep_prob,
                     model.rnn_dropout_keep_prob: FLAGS.rnn_dropout_keep_prob,
                     model.dropout_keep_prob: FLAGS.dropout_keep_prob
@@ -140,17 +164,20 @@ def train():
                 if step % FLAGS.evaluate_every == 0:
                     print("\nEvaluation:")
                     # Generate batches
-                    test_batches = data_helpers.batch_iter(list(zip(test_x, test_y)), FLAGS.batch_size, 1, shuffle=False)
+                    test_batches = data_helpers.batch_iter(list(zip(test_x, test_y, test_p1, test_p2)),
+                                                           FLAGS.batch_size, 1, shuffle=False)
                     # Training loop. For each batch...
                     losses = 0.0
                     accuracy = 0.0
                     predictions = []
                     iter_cnt = 0
                     for test_batch in test_batches:
-                        test_bx, test_by = zip(*test_batch)
+                        test_bx, test_by, test_bp1, test_bp2 = zip(*test_batch)
                         feed_dict = {
                             model.input_x: test_bx,
                             model.input_y: test_by,
+                            model.input_p1: test_bp1,
+                            model.input_p2: test_bp2,
                             model.emb_dropout_keep_prob: 1.0,
                             model.rnn_dropout_keep_prob: 1.0,
                             model.dropout_keep_prob: 1.0

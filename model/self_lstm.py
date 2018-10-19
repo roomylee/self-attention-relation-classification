@@ -5,11 +5,14 @@ from model.attention import multihead_attention, attention
 
 
 class SelfLSTM:
-    def __init__(self, sequence_length, num_classes, vocab_size, embedding_size,
+    def __init__(self, sequence_length, num_classes,
+                 vocab_size, embedding_size, pos_vocab_size, pos_embedding_size,
                  hidden_size, num_heads, attention_size, l2_reg_lambda=0.0):
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, shape=[None, sequence_length], name='input_x')
         self.input_y = tf.placeholder(tf.float32, shape=[None, num_classes], name='input_y')
+        self.input_p1 = tf.placeholder(tf.int32, shape=[None, sequence_length], name='input_p1')
+        self.input_p2 = tf.placeholder(tf.int32, shape=[None, sequence_length], name='input_p2')
         self.emb_dropout_keep_prob = tf.placeholder(tf.float32, name='emb_dropout_keep_prob')
         self.rnn_dropout_keep_prob = tf.placeholder(tf.float32, name='rnn_dropout_keep_prob')
         self.dropout_keep_prob = tf.placeholder(tf.float32, name='dropout_keep_prob')
@@ -18,6 +21,12 @@ class SelfLSTM:
         with tf.device('/cpu:0'), tf.variable_scope("word-embeddings"):
             self.W_text = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -0.25, 0.25), name="W_text")
             self.embedded_chars = tf.nn.embedding_lookup(self.W_text, self.input_x)
+
+        # Position Embedding Layer
+        with tf.device('/cpu:0'), tf.variable_scope("position-embeddings"):
+            self.W_pos = tf.get_variable("W_pos", [pos_vocab_size, pos_embedding_size], initializer=initializer())
+            self.p1 = tf.nn.embedding_lookup(self.W_pos, self.input_p1)[:, :tf.shape(self.embedded_chars)[1]]
+            self.p2 = tf.nn.embedding_lookup(self.W_pos, self.input_p2)[:, :tf.shape(self.embedded_chars)[1]]
 
         # Dropout for Word Embedding
         with tf.variable_scope('dropout-embeddings'):

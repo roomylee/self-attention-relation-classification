@@ -25,6 +25,8 @@ def parse_args():
                         type=str, help="Embeddings {'word2vec', 'glove100', 'glove300', 'elmo'}")
     parser.add_argument("--embedding_size", default=300,
                         type=int, help="Dimensionality of word embedding (default: 300)")
+    parser.add_argument("--pos_embedding_size", default=50,
+                        type=int, help="Dimensionality of relative position embedding (default: 50)")
     parser.add_argument("--emb_dropout_keep_prob", default=0.7,
                         type=float, help="Dropout keep probability of embedding layer (default: 0.7)")
     # RNN
