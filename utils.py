@@ -28,15 +28,15 @@ def initializer():
     return tf.keras.initializers.glorot_normal()
 
 
-def load_word2vec(word2vec_path, embedding_dim, vocab):
+def load_word2vec(embedding_path, embedding_dim, vocab):
     # initial matrix with random uniform
-    initW = np.random.randn(len(vocab.vocabulary_), embedding_dim).astype(np.float32) * np.sqrt(2.0 / len(vocab.vocabulary_))
+    initW = np.random.randn(len(vocab.vocabulary_), embedding_dim).astype(np.float32) / np.sqrt(len(vocab.vocabulary_))
     # load any vectors from the word2vec
-    print("Load word2vec file {0}".format(word2vec_path))
-    with open(word2vec_path, "rb") as f:
+    print("Load word2vec file {0}".format(embedding_path))
+    with open(embedding_path, "rb") as f:
         header = f.readline()
-        vocab_size, layer1_size = map(int, header.split())
-        binary_len = np.dtype('float32').itemsize * layer1_size
+        vocab_size, layer_size = map(int, header.split())
+        binary_len = np.dtype('float32').itemsize * layer_size
         for line in range(vocab_size):
             word = []
             while True:
@@ -54,12 +54,12 @@ def load_word2vec(word2vec_path, embedding_dim, vocab):
     return initW
 
 
-def load_glove(word2vec_path, embedding_dim, vocab):
+def load_glove(embedding_path, embedding_dim, vocab):
     # initial matrix with random uniform
-    initW = np.random.randn(len(vocab.vocabulary_), embedding_dim).astype(np.float32) * np.sqrt(2.0 / len(vocab.vocabulary_))
+    initW = np.random.randn(len(vocab.vocabulary_), embedding_dim).astype(np.float32) / np.sqrt(len(vocab.vocabulary_))
     # load any vectors from the word2vec
-    print("Load glove file {0}".format(word2vec_path))
-    f = open(word2vec_path, 'r', encoding='utf8')
+    print("Load glove file {0}".format(embedding_path))
+    f = open(embedding_path, 'r', encoding='utf8')
     for line in f:
         splitLine = line.split(' ')
         word = splitLine[0]

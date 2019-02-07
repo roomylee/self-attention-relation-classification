@@ -21,16 +21,17 @@ class SelfCNN:
         with tf.device('/cpu:0'), tf.variable_scope("word-embeddings"):
             self.W_text = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -0.25, 0.25), name="W_text")
             self.embedded_chars = tf.nn.embedding_lookup(self.W_text, self.input_x)
+            self.embedded_chars = tf.expand_dims(self.embedded_chars, -1)
 
         # Dropout for Word Embedding
-        with tf.variable_scope('dropout-embeddings'):
-            self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.emb_dropout_keep_prob)
+        # with tf.variable_scope('dropout-embeddings'):
+        #     self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.emb_dropout_keep_prob)
 
         # Self Attention
-        with tf.variable_scope("self-attention"):
-            self.self_attn, self.self_alphas = multihead_attention(self.embedded_chars, self.embedded_chars,
-                                                                   num_units=embedding_size, num_heads=num_heads)
-            self.self_attn_expanded = tf.expand_dims(self.self_attn, -1)
+        # with tf.variable_scope("self-attention"):
+        #     self.self_attn, self.self_alphas = multihead_attention(self.embedded_chars, self.embedded_chars,
+        #                                                            num_units=embedding_size, num_heads=num_heads)
+        #     self.self_attn_expanded = tf.expand_dims(self.self_attn, -1)
 
         # Position Embedding Layer
         with tf.device('/cpu:0'), tf.variable_scope("position-embeddings"):
@@ -40,7 +41,7 @@ class SelfCNN:
             self.p1_expanded = tf.expand_dims(self.p1, -1)
             self.p2_expanded = tf.expand_dims(self.p2, -1)
 
-        self.emb_expanded = tf.concat([self.self_attn_expanded, self.p1_expanded, self.p2_expanded], 2)
+        self.emb_expanded = tf.concat([self.embedded_chars, self.p1_expanded, self.p2_expanded], 2)
         _embedding_size = embedding_size + 2 * pos_embedding_size
 
         # Create a convolution + maxpool layer for each filter size
