@@ -6,7 +6,7 @@ This repository contains the official TensorFlow implementation of the following
 
 > **Improving the Performance and Interpretability of Semantic Relation Classification with Self-Attention Mechanism**<br>
 > Joohong Lee, Sangwoo Seo, Yong Suk Choi<br>
-> [paper](https://www.dbpia.co.kr/Journal/ArticleDetail/NODE07613662)
+> [https://www.dbpia.co.kr/Journal/ArticleDetail/NODE07613662](https://www.dbpia.co.kr/Journal/ArticleDetail/NODE07613662)
 
 
 ## Usage
